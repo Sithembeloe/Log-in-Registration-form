@@ -1,8 +1,30 @@
+
+import bcrypt
+from sqlite3 import connect
 import tkinter
 from tkinter import *
 from tkinter import messagebox
 import pyttsx3
 import ast
+from pymongo import MongoClient
+
+from dotenv import load_dotenv
+import os
+load_dotenv('.env') 
+
+client = MongoClient()
+
+
+
+mongoURL = os.environ.get("DR_Url")
+
+connection = MongoClient(mongoURL)
+
+db = connection.TKDB
+
+collection = {
+	"users": db.users
+	}
 
 engine = pyttsx3.init('sapi5')
 voices = engine.getProperty('voices')
@@ -20,22 +42,28 @@ root.configure(bg="#fff")
 root.resizable(False,False)
 
 def Signin():
+    mainUser = None
     Name = user.get()
     Password = code.get()
 
-    file = open('datasheet.txt','r')
-    d = file.read()
-    r = ast.literal_eval(d)
-    file.close()
+    User = collection["users"].find({"Name": Name})
 
+    for i in User:
+        mainUser = i
+
+    print(mainUser["Name"])
+
+    password = mainUser["Password"].encode('utf-8')
 
     # print(r.keys())
     # print(r.values())
+    name = mainUser["Name"]
+    passwordCorrect = bcrypt.checkpw(Password.encode(), password)
 
-    if Name in r.keys() and Password == r[Name]:
-        speak('Welcome back!')
+    if(name and passwordCorrect):
+        speak('Welcome back! {}'.format(name))
         root.destroy()
-        # import Main1
+    #     # import Main1
 
     else:
         speak('Invalid Name or Password!')
@@ -64,34 +92,32 @@ def signup_command():
 
 
     def signup():
+       
         Name=user.get()
         Gender=Gender1.get()
         Email=Email1.get()
         Password=code.get()
         confirm_password=confirm_code.get()
+        
 
         if Password==confirm_password:
             try:
-                file=open('datasheet.txt','r+')
-                d=file.read()
-                r=ast.literal_eval(d)
+                #Encode your password and hash it:
+                Password = Password.encode('utf-8')
+                Password = bcrypt.hashpw(Password, bcrypt.gensalt())
+                Password = Password.decode('utf-8')
 
-                dict2={Name:Password, Email:Gender}
-                r.update(dict2)
-                file.truncate(0)
-                file.close()
+                print(Password)
 
-                file=open('datasheet.txt','w')
-                w=file.write(str(r))
-
+                #Create a user array for that goes into MongoDB:
+                User = {"Name":Name, "Gender": Gender, "Email": Email, "Password": Password}
+                collection["users"].insert_one(User)
                 messagebox.showinfo('Signup','Successfully signed up')
                 window.destroy()
 
             except:
-                file=open('datasheet.txt','w')
-                pp=str({'Name':'Password', 'Email':'Gender'})
-                file.write(pp)
-                file.close()
+                messagebox.showinfo('Something went wrong')
+                
 
         # else:
         #     messagebox.showerror('Invalid','both entered Password do not match!')
@@ -103,7 +129,7 @@ def signup_command():
 
 
 
-    img = PhotoImage(file='Laylaimg2.png')
+    img = PhotoImage(file='mark.png')
     Label(window,image=img, border=0,bg='white').place(x=70,y=110)
 
     frame=Frame(window,width=350,height=590,bg='#fff')
@@ -138,10 +164,6 @@ def signup_command():
 
         else:
             speak(f"welcome {Name}")
-            speak("my name is Layla, I'm here to guide you through registration process")
-            speak(f"let start with your name... the name you entered is {Name}, you can change this name now...or I will use it to call you throught out and you can no longer change it")
-            speak('if you you would like to hear me pronuncing your name again, re-enter your name and click over gender word')
-            speak('otherwise continue with your signup')
         Gender1.delete(0,'end')
         signup()
         Gender = Gender1.get()
@@ -242,7 +264,7 @@ def signup_command():
 
 
 
-img = PhotoImage(file='Laylaimg.png')
+img = PhotoImage(file='mark.png')
 Label(root,image=img,bg='white').place(x=50,y=50)
 
 frame = Frame(root,width=350,height=350,bg='white')
@@ -290,8 +312,6 @@ Button(frame,width=39,pady=7,text='Sign in',bg='#540000',fg='white',border=0,com
 label = Label(frame,text="Don't have an acoount?",fg='black',bg='white',font=('Microsoft Yahei UI Light',9))
 label.place(x=75,y=270)
 
-sign_up = Button(frame,width=6,text='Sign up',border=0,bg='white',cursor='hand2',fg='#540000', command=signup_command)
-sign_up.place(x=215,y=270)
+Button(frame,width=6,text='Sign up',border=0,bg='white',cursor='hand2',fg='#540000', command=signup_command).place(x=215,y=270)
 
 root.mainloop()
-
