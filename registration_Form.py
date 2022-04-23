@@ -8,7 +8,7 @@ import pyttsx3
 import ast
 from pymongo import MongoClient
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv #To load variables from .env
 import os
 load_dotenv('.env') 
 
